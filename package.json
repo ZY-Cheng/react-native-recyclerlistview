@@ -1,0 +1,36 @@
+{
+  "name": "react-native-recyclerlistview",
+  "version": "0.0.1",
+  "description": "A high performance list view component (WIP)",
+  "main": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZY-Cheng/react-native-recyclerlistview.git"
+  },
+  "keywords": [
+    "recycler",
+    "listview",
+    "react-native"
+  ],
+  "author": "ZY Cheng",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ZY-Cheng/react-native-recyclerlistview/issues"
+  },
+  "homepage": "https://github.com/ZY-Cheng/react-native-recyclerlistview#readme",
+  "scripts": {},
+  "dependencies": {
+    "react-native": "^0.69.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.9",
+    "@react-native-community/eslint-config": "^3.1.0",
+    "@tsconfig/react-native": "^2.0.2",
+    "@types/react": "~18.0.14",
+    "@types/react-native": "~0.69.1",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "eslint": "^8.26.0",
+    "typescript": "~4.3.5"
+  }
+}
