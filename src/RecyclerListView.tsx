@@ -14,7 +14,12 @@ import {
   ViewStyle,
 } from 'react-native';
 import DebugComponent from './debug/DebugComponent';
-import {getItemDimension, MixItemDimension} from './helper';
+import {
+  getItemDimension,
+  getScrollDirection,
+  MixItemDimension,
+  ScrollDirection,
+} from './helper';
 import RecyclerItem from './RecyclerItem';
 import RecyclerListViewContext, {ContextValue} from './RecyclerListViewContext';
 import VisibilityManager, {
@@ -35,9 +40,24 @@ type RecyclerListViewProps<T = any> = ScrollViewProps & {
   renderItem(info: {data: T; index: number; type?: RenderType}): JSX.Element;
   itemDimension: MixItemDimension<T>;
   getItemType?: GetRenderType<T>;
+  /**
+   * The distance of rendering in ahead.
+   */
   renderAheadOffset?: number;
+  /**
+   * How far from the end (in units of viewable window dimension)
+   * the bottom edge of the list must be from the end of the content
+   * to trigger the `onEndReached` callback.
+   * Thus a value of 0.5 will trigger `onEndReached`
+   * when the end of the content is within half viewable window.
+   */
   onEndReachedThreshold?: number;
-  onEndReached?: (info: {distanceFromEnd: number}) => void;
+  /**
+   * A function that is called when the user scrolls to the end of the list.
+   * @param resolve after calling, the component can will continue to trigger `onEndReached`.
+   * `isWaitForUpdate` means whether waiting for the component's `componentDidUpdate` or not.
+   */
+  onEndReached?: (resolve: (isWaitForUpdate?: boolean) => void) => void;
   onViewableItemsChanged?: (info: {
     viewableItems: ViewToken<T>[];
     changed: ViewToken<T>[];
@@ -68,6 +88,7 @@ abstract class RecyclerListViewPublicImpl<T> {
 
 const defaultProps: Partial<RecyclerListViewProps> = {
   getItemType: () => 0,
+  onEndReachedThreshold: 0,
 };
 
 class RecyclerListView<T>
@@ -113,10 +134,10 @@ class RecyclerListView<T>
   private _hostUpdate = {
     id: -1,
     trigger: () => {
-      const {itemDimension, getItemType, horizontal} = this.props;
+      const {itemDimension, getItemType} = this.props;
       return this._visibilityManager.updateRenderItems(
         this.state.data,
-        this._scrollOffset[horizontal ? 'x' : 'y'],
+        this._getScrollOffset(),
         itemDimension,
         getItemType!,
       );
@@ -136,6 +157,9 @@ class RecyclerListView<T>
     visibilityManager: this._visibilityManager,
     getScrollContentDimension: () => this.state.scrollContentDimension,
   };
+  private _isOnEndReachedTriggered:
+    | boolean
+    | Parameters<ConstructorParameters<PromiseConstructor>[0]>[0] = false;
 
   constructor(props: RecyclerListViewProps<T>) {
     super(props);
@@ -168,7 +192,11 @@ class RecyclerListView<T>
 
   componentDidMount() {}
 
-  componentDidUpdate() {}
+  componentDidUpdate() {
+    if (typeof this._isOnEndReachedTriggered === 'function') {
+      this._isOnEndReachedTriggered(false);
+    }
+  }
 
   render() {
     const {scrollContentStyle, debug, horizontal} = this.props;
@@ -235,6 +263,9 @@ class RecyclerListView<T>
   private _handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const {onScroll} = this.props;
     const {contentOffset} = e.nativeEvent;
+
+    this._maybeCallOnEndReached(this._scrollOffset);
+
     this._scrollOffset = contentOffset;
 
     // Use `requestAnimationFrame()` for reduce bridge messages.
@@ -257,18 +288,17 @@ class RecyclerListView<T>
   };
 
   private _handleLayout = (e: LayoutChangeEvent) => {
-    const {onLayout, itemDimension, getItemType, horizontal} = this.props;
+    const {onLayout, itemDimension, getItemType} = this.props;
     const scrollContainerLayout = e.nativeEvent.layout;
     this._context.triggerRenderTimestamp = Date.now();
-    const scrollableDimensionName = horizontal ? 'width' : 'height';
-    if (
-      this._scrollContainerLayout[scrollableDimensionName] !==
-      scrollContainerLayout[scrollableDimensionName]
-    ) {
+    const curScrollableDimensionName = this._getScrollContainerDimension(
+      scrollContainerLayout,
+    );
+    if (this._getScrollContainerDimension() !== curScrollableDimensionName) {
       const renderItemInfos = this._visibilityManager.updateScrollerDimension(
         this.state.data,
-        scrollContainerLayout[scrollableDimensionName],
-        this._scrollOffset[horizontal ? 'x' : 'y'],
+        curScrollableDimensionName,
+        this._getScrollOffset(),
         itemDimension,
         getItemType!,
       );
@@ -278,6 +308,69 @@ class RecyclerListView<T>
 
     onLayout?.(e);
   };
+
+  private _maybeCallOnEndReached(preScrollOffset: NativeScrollPoint) {
+    const {onEndReachedThreshold, onEndReached} = this.props;
+    const scrollContentDimension = this._getScrollContentDimension();
+    if (
+      !onEndReached ||
+      this._isOnEndReachedTriggered ||
+      scrollContentDimension === 0 ||
+      this.state.data.length === 0
+    ) {
+      return;
+    }
+
+    const curScrollOffset = this._getScrollOffset();
+    const scrollContainerDimension = this._getScrollContainerDimension();
+    const distanceFromEnd =
+      scrollContentDimension - curScrollOffset - scrollContainerDimension;
+    const throttle = scrollContainerDimension * onEndReachedThreshold!;
+    if (
+      distanceFromEnd <= throttle &&
+      getScrollDirection(
+        this._getScrollOffset(preScrollOffset),
+        curScrollOffset,
+      ) === ScrollDirection.FORWARD
+    ) {
+      this._isOnEndReachedTriggered = true;
+      try {
+        onEndReached(isWaitForUpdate => {
+          if (isWaitForUpdate) {
+            new Promise(resolve => {
+              this._isOnEndReachedTriggered = resolve;
+            }).then(val => (this._isOnEndReachedTriggered = val as boolean));
+          } else {
+            this._isOnEndReachedTriggered = false;
+          }
+        });
+      } finally {
+      }
+    }
+  }
+
+  private _getScrollContentDimension(
+    scrollContentDimension?: NativeScrollSize,
+  ) {
+    return (scrollContentDimension || this.state.scrollContentDimension)[
+      this.props.horizontal ? 'width' : 'height'
+    ];
+  }
+
+  private _getScrollContainerDimension(scrollContainerDimension?: {
+    width: number;
+    height: number;
+  }) {
+    return (scrollContainerDimension || this._scrollContainerLayout)[
+      this.props.horizontal ? 'width' : 'height'
+    ];
+  }
+
+  private _getScrollOffset(scrollOffset?: NativeScrollPoint) {
+    return (scrollOffset || this._scrollOffset)[
+      this.props.horizontal ? 'x' : 'y'
+    ];
+  }
 
   private _renderItems = (renderItemInfos: RenderItemInfo<T>[]) => {
     const {renderItem, horizontal} = this.props;
