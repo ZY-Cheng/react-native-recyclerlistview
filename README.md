@@ -17,7 +17,7 @@ If you are looking for recycle list view component, you can try [flash-list](htt
 - [x] Debug mode, like `VirtualizedList`
 - [ ] Item dimension correction
 - [ ] Masonry layout
-- [ ] Muti-column layout
+- [ ] Multi-column layout
 - [ ] Support changeable item dimension
 - [ ] Sticky header
 
