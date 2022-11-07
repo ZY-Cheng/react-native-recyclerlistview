@@ -15,9 +15,9 @@ If you are looking for recycle list view component, you can try [flash-list](htt
 - [x] Auto update items after `ScrollView` container re-layout
 - [x] Horizontal layout
 - [x] Debug mode, like `VirtualizedList`
+- [x] Multi-column layout
 - [ ] Item dimension correction
 - [ ] Masonry layout
-- [ ] Multi-column layout
 - [ ] Support changeable item dimension
 - [ ] Sticky header
 
