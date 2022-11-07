@@ -8,7 +8,9 @@ import {
 } from 'react-native';
 import RecyclerListViewContext from '../RecyclerListViewContext';
 
-type Props = {};
+type Props = {
+  debug?: number | true;
+};
 
 type State = {
   renderWinOffset: Animated.Value;
@@ -44,8 +46,14 @@ if (__DEV__) {
     isUpdateLocked = false;
 
     loopRender = () => {
-      const {visibilityManager, getScrollContentDimension, isHorizontal} =
-        this.context;
+      const {debug} = this.props;
+      const which = debug === true ? 1 : debug;
+      const {
+        getMultiVisibilityManager,
+        getScrollContentDimension,
+        isHorizontal,
+      } = this.context;
+      const visibilityManager = getMultiVisibilityManager()[which];
       const scrollableDimensionName = isHorizontal() ? 'width' : 'height';
       const ratio =
         this.layout[scrollableDimensionName] /
@@ -251,4 +259,7 @@ if (__DEV__) {
   Component = DebugComponent;
 }
 
-export default memo(Component, () => true);
+export default memo(
+  Component,
+  (preProps, nextProps) => preProps.debug === nextProps.debug,
+);

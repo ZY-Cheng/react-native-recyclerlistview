@@ -90,9 +90,11 @@ class VisibilityManager<T> {
   private _renderAheadOffset = 0;
   private _scrollOffset = 0;
   private _column = 1;
+  private _numColumns = 1;
 
-  constructor(column: number) {
+  constructor(column: number, numColumns: number) {
     this._column = column;
+    this._numColumns = numColumns;
   }
 
   setRenderAheadOffset(val: number) {
@@ -197,20 +199,19 @@ class VisibilityManager<T> {
       this._clearRenderItemInfos();
       this._appendItemInfo(itemInfo.item);
       this._setBothEnds(selectedEndpoint, selectedEndpoint);
-
-      this._updateRenderItemInfos(
-        data,
-        IterationDirection.FORWARD,
-        itemDimension,
-        getItemType,
-      );
-      this._updateRenderItemInfos(
-        data,
-        IterationDirection.BACKWARD,
-        itemDimension,
-        getItemType,
-      );
     }
+    this._updateRenderItemInfos(
+      data,
+      IterationDirection.FORWARD,
+      itemDimension,
+      getItemType,
+    );
+    this._updateRenderItemInfos(
+      data,
+      IterationDirection.BACKWARD,
+      itemDimension,
+      getItemType,
+    );
 
     return [...this._renderItemInfos];
   }
@@ -326,6 +327,7 @@ class VisibilityManager<T> {
       const newItemInfoEndpointLocation = isForward ? 1 : 0;
       let disappearingEndpoint = bothEnds[disappearingEndpointLocation];
       const anotherEndpoint = bothEnds[newItemInfoEndpointLocation];
+      const nextIdxStep = direction * this._numColumns;
 
       for (let i = 0; i < nextRenderItemInfos.length; i++) {
         const item = nextRenderItemInfos[i];
@@ -366,7 +368,7 @@ class VisibilityManager<T> {
         } else {
           this._replaceItemInfo(disappearingEndpoint, item);
           const nextDisappearingEndpointDataIdx =
-            disappearingEndpoint.index + direction;
+            disappearingEndpoint.index + nextIdxStep;
           const nextDisappearingEndpointIdx = itemIdxToItemInfoIdxMap.get(
             nextDisappearingEndpointDataIdx,
           );
@@ -406,7 +408,7 @@ class VisibilityManager<T> {
 
       const isContinuousIdx =
         anotherEndpoint &&
-        nextRenderItemInfos[0].index === anotherEndpoint.index + direction;
+        nextRenderItemInfos[0].index === anotherEndpoint.index + nextIdxStep;
       if (!isContinuousIdx) {
         // If the next item is not continuous,
         // it means that there were quickly scrolling,
@@ -484,8 +486,10 @@ class VisibilityManager<T> {
     let preScrollableDim: number = preItemInfo
       ? getItemDimension(itemDimension, preItemInfo.data, preItemInfo.index)
       : 0;
-    const searchIndex = endpoint ? endpoint.index : -this._column;
-    const searchStep = direction * this._column;
+    const searchIndex = endpoint
+      ? endpoint.index
+      : this._column - this._numColumns;
+    const searchStep = direction * this._numColumns;
     const searchRange = isForward
       ? [searchIndex + searchStep, data.length]
       : [searchIndex + searchStep, -1];

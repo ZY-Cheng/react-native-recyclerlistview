@@ -3,7 +3,7 @@ import VisibilityManager from './VisibilityManager';
 
 export type ContextValue<T = any> = {
   triggerRenderTimestamp: number;
-  visibilityManager: VisibilityManager<T> | VisibilityManager<T>[];
+  getMultiVisibilityManager(): VisibilityManager<T>[];
   getScrollContentDimension(): {width: number; height: number};
   isHorizontal(): boolean | null | undefined;
 };
