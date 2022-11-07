@@ -291,13 +291,13 @@ class RecyclerListView<T>
     const {onLayout, itemDimension, getItemType} = this.props;
     const scrollContainerLayout = e.nativeEvent.layout;
     this._context.triggerRenderTimestamp = Date.now();
-    const curScrollableDimensionName = this._getScrollContainerDimension(
+    const curScrollableDimension = this._getScrollContainerDimension(
       scrollContainerLayout,
     );
-    if (this._getScrollContainerDimension() !== curScrollableDimensionName) {
+    if (this._getScrollContainerDimension() !== curScrollableDimension) {
       const renderItemInfos = this._visibilityManager.updateScrollerDimension(
         this.state.data,
-        curScrollableDimensionName,
+        curScrollableDimension,
         this._getScrollOffset(),
         itemDimension,
         getItemType!,
