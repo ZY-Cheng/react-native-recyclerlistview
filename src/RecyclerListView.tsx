@@ -58,6 +58,11 @@ type RecyclerListViewProps<T = any> = ScrollViewProps & {
    * `isWaitForUpdate` means whether waiting for the component's `componentDidUpdate` or not.
    */
   onEndReached?: (resolve: (isWaitForUpdate?: boolean) => void) => void;
+  /**
+   * @default 1
+   * @description The number of column.
+   */
+  numColumns?: number;
   onViewableItemsChanged?: (info: {
     viewableItems: ViewToken<T>[];
     changed: ViewToken<T>[];
@@ -77,7 +82,8 @@ type RecyclerListViewProps<T = any> = ScrollViewProps & {
 type RecyclerListViewState<T = any> = {
   data: T[];
   scrollContentDimension: NativeScrollSize;
-  renderItemInfos: RenderItemInfo<T>[];
+  renderItemInfos: RenderItemInfo<T>[] | RenderItemInfo<T>[][];
+  columnsArr: any[];
 };
 
 abstract class RecyclerListViewPublicImpl<T> {
@@ -89,6 +95,7 @@ abstract class RecyclerListViewPublicImpl<T> {
 const defaultProps: Partial<RecyclerListViewProps> = {
   getItemType: () => 0,
   onEndReachedThreshold: 0,
+  numColumns: 1,
 };
 
 class RecyclerListView<T>
@@ -103,24 +110,31 @@ class RecyclerListView<T>
   > = (nextProps, prevState) => {
     const {data, itemDimension, horizontal} = nextProps;
 
+    let columnsArr: any[] = [];
+    if (nextProps.numColumns !== prevState.columnsArr.length) {
+      columnsArr = new Array(nextProps.numColumns!).fill(0);
+    }
+
+    const scrollableDimensionName = horizontal ? 'width' : 'height';
+    const crossDimensionName = horizontal ? 'height' : 'width';
+    let scrollContentDimension = {
+      [scrollableDimensionName]:
+        prevState.scrollContentDimension[scrollableDimensionName],
+      [crossDimensionName]:
+        prevState.scrollContentDimension[crossDimensionName],
+    } as unknown as NativeScrollSize;
     if (nextProps.data.length !== prevState.data.length) {
-      const scrollableDimensionName = horizontal ? 'width' : 'height';
-      const crossDimensionName = horizontal ? 'height' : 'width';
       const scrollContentScrollableSize = data.reduce((acc, item, index) => {
         return acc + getItemDimension(itemDimension, item, index);
       }, 0);
-
-      return {
-        data,
-        scrollContentDimension: {
-          [scrollableDimensionName]: scrollContentScrollableSize,
-          [crossDimensionName]:
-            prevState.scrollContentDimension[crossDimensionName],
-        } as NativeScrollSize,
-      };
+      scrollContentDimension[scrollableDimensionName] =
+        scrollContentScrollableSize;
     }
+
     return {
       data,
+      scrollContentDimension,
+      columnsArr,
     };
   };
 
@@ -128,6 +142,7 @@ class RecyclerListView<T>
     data: [],
     scrollContentDimension: {width: 0, height: 0},
     renderItemInfos: [],
+    columnsArr: [],
   };
   scrollRef = createRef<ScrollView>();
 
@@ -135,12 +150,23 @@ class RecyclerListView<T>
     id: -1,
     trigger: () => {
       const {itemDimension, getItemType} = this.props;
-      return this._visibilityManager.updateRenderItems(
-        this.state.data,
-        this._getScrollOffset(),
-        itemDimension,
-        getItemType!,
-      );
+      if (Array.isArray(this._visibilityManager)) {
+        return this._visibilityManager.map(manager => {
+          return manager.updateRenderItems(
+            this.state.data,
+            this._getScrollOffset(),
+            itemDimension,
+            getItemType!,
+          );
+        });
+      } else {
+        return this._visibilityManager.updateRenderItems(
+          this.state.data,
+          this._getScrollOffset(),
+          itemDimension,
+          getItemType!,
+        );
+      }
     },
   };
   private _scrollContainerLayout: LayoutRectangle = {
@@ -149,7 +175,10 @@ class RecyclerListView<T>
     width: 0,
     height: 0,
   };
-  private _visibilityManager: VisibilityManager<T> = new VisibilityManager();
+  private _visibilityManager: VisibilityManager<T> | VisibilityManager<T>[] =
+    this._isMultiCol
+      ? this.state.columnsArr.map((_, index) => new VisibilityManager(index))
+      : new VisibilityManager(1);
   private _scrollOffset: NativeScrollPoint = {x: 0, y: 0};
   private _context: ContextValue<T> = {
     isHorizontal: () => this.props.horizontal,
@@ -160,10 +189,22 @@ class RecyclerListView<T>
   private _isOnEndReachedTriggered:
     | boolean
     | Parameters<ConstructorParameters<PromiseConstructor>[0]>[0] = false;
+  private get _isMultiCol() {
+    return this.props.numColumns! > 1;
+  }
 
   constructor(props: RecyclerListViewProps<T>) {
     super(props);
-    this._visibilityManager.setRenderAheadOffset(props.renderAheadOffset ?? 0);
+
+    if (Array.isArray(this._visibilityManager)) {
+      this._visibilityManager.forEach(manager => {
+        manager.setRenderAheadOffset(props.renderAheadOffset ?? 0);
+      });
+    } else {
+      this._visibilityManager.setRenderAheadOffset(
+        props.renderAheadOffset ?? 0,
+      );
+    }
   }
 
   scrollToItem(info: {item: T; animated?: boolean}) {
@@ -212,7 +253,7 @@ class RecyclerListView<T>
       scrollEventThrottle: 0.001,
     };
     const scrollableDimensionName = horizontal ? 'width' : 'height';
-
+    console.log('sss', this._isMultiCol);
     return (
       <RecyclerListViewContext.Provider value={this._context}>
         <View
@@ -228,7 +269,7 @@ class RecyclerListView<T>
               style={StyleSheet.compose<ViewStyle>(
                 [
                   styles.scrollContent,
-                  horizontal ? styles.row : styles.column,
+                  horizontal || this._isMultiCol ? styles.row : styles.column,
                   {
                     [scrollableDimensionName]:
                       this.state.scrollContentDimension[
@@ -238,7 +279,12 @@ class RecyclerListView<T>
                 ],
                 scrollContentStyle,
               )}>
-              {this._renderItems(this.state.renderItemInfos)}
+              {this._isMultiCol
+                ? this._renderColumnsContainer()
+                : this._renderItems(
+                    this.state
+                      .renderItemInfos as unknown as RenderItemInfo<T>[],
+                  )}
             </View>
           </ScrollView>
 
@@ -295,13 +341,27 @@ class RecyclerListView<T>
       scrollContainerLayout,
     );
     if (this._getScrollContainerDimension() !== curScrollableDimensionName) {
-      const renderItemInfos = this._visibilityManager.updateScrollerDimension(
-        this.state.data,
-        curScrollableDimensionName,
-        this._getScrollOffset(),
-        itemDimension,
-        getItemType!,
-      );
+      let renderItemInfos: RenderItemInfo<T>[] | RenderItemInfo<T>[][];
+      if (Array.isArray(this._visibilityManager)) {
+        renderItemInfos = this._visibilityManager.map(manager => {
+          return manager.updateScrollerDimension(
+            this.state.data,
+            curScrollableDimensionName,
+            this._getScrollOffset(),
+            itemDimension,
+            getItemType!,
+          );
+        });
+      } else {
+        renderItemInfos = this._visibilityManager.updateScrollerDimension(
+          this.state.data,
+          curScrollableDimensionName,
+          this._getScrollOffset(),
+          itemDimension,
+          getItemType!,
+        );
+      }
+
       this.setState({renderItemInfos});
     }
     this._scrollContainerLayout = scrollContainerLayout;
@@ -372,6 +432,23 @@ class RecyclerListView<T>
     ];
   }
 
+  private _renderColumnsContainer() {
+    const {columnsArr, renderItemInfos} = this.state;
+    return columnsArr.map((_, index) => {
+      return (
+        <View
+          style={StyleSheet.compose<ViewStyle>(
+            [styles.flex1, this.props.horizontal ? styles.row : styles.column],
+            null,
+          )}>
+          {this._renderItems(
+            renderItemInfos[index] as unknown as RenderItemInfo<T>[],
+          )}
+        </View>
+      );
+    });
+  }
+
   private _renderItems = (renderItemInfos: RenderItemInfo<T>[]) => {
     const {renderItem, horizontal} = this.props;
 
@@ -394,6 +471,7 @@ class RecyclerListView<T>
 const styles = StyleSheet.create({
   row: {flexDirection: 'row'},
   column: {flexDirection: 'column'},
+  flex1: {flex: 1},
   scrollContainer: {
     flex: 1,
   },

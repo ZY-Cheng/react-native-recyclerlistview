@@ -59,7 +59,7 @@ class VisibilityManager<T> {
   /**
    * Whether render items are changed than last render time.
    */
-  isChanged: boolean = false;
+  isChanged = false;
   /**
    * Note: for performance (i.e. minimize the amount of update.),
    * the data isn't order by index of data item.
@@ -86,9 +86,14 @@ class VisibilityManager<T> {
    * So that we can priority to replace it in the subsequent.
    */
   private _itemIdxToItemInfoIdxMap: Map<number, number> = new Map();
-  private _scrollerDimension: number = 0;
-  private _renderAheadOffset: number = 0;
-  private _scrollOffset: number = 0;
+  private _scrollerDimension = 0;
+  private _renderAheadOffset = 0;
+  private _scrollOffset = 0;
+  private _column = 1;
+
+  constructor(column: number) {
+    this._column = column;
+  }
 
   setRenderAheadOffset(val: number) {
     this._renderAheadOffset = val;
@@ -479,15 +484,16 @@ class VisibilityManager<T> {
     let preScrollableDim: number = preItemInfo
       ? getItemDimension(itemDimension, preItemInfo.data, preItemInfo.index)
       : 0;
-    const searchIndex = endpoint ? endpoint.index : -1;
+    const searchIndex = endpoint ? endpoint.index : -this._column;
+    const searchStep = direction * this._column;
     const searchRange = isForward
-      ? [searchIndex + direction, data.length]
-      : [searchIndex + direction, -1];
+      ? [searchIndex + searchStep, data.length]
+      : [searchIndex + searchStep, -1];
     let i = searchRange[0];
     const searchRangeEnd = searchRange[1];
     const conditionLeft = isForward ? () => i : () => searchRangeEnd;
     const conditionRight = isForward ? () => searchRangeEnd : () => i;
-    for (; conditionLeft() < conditionRight(); i += direction) {
+    for (; conditionLeft() < conditionRight(); i += searchStep) {
       const item = data[i];
       const scrollableDim = getItemDimension(itemDimension, item, i);
       const position = isForward
