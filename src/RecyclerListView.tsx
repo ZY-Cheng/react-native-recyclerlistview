@@ -129,7 +129,7 @@ class RecyclerListView<T>
     ) {
       const scrollContentScrollableSize = Math.max(
         ...data.reduce((acc, item, index) => {
-          acc[index % numColumns] += getItemDimension(
+          acc[index % numColumns!] += getItemDimension(
             itemDimension,
             item,
             index,
@@ -345,15 +345,15 @@ class RecyclerListView<T>
     const {onLayout, itemDimension, getItemType} = this.props;
     const scrollContainerLayout = e.nativeEvent.layout;
     this._context.triggerRenderTimestamp = Date.now();
-    const curScrollableDimensionName = this._getScrollContainerDimension(
+    const curScrollableDimension = this._getScrollContainerDimension(
       scrollContainerLayout,
     );
-    if (this._getScrollContainerDimension() !== curScrollableDimensionName) {
+    if (this._getScrollContainerDimension() !== curScrollableDimension) {
       this.setState({
         multiRenderItemInfos: this._multiVisibilityManager.map(manager => {
           return manager.updateScrollerDimension(
             this.state.data,
-            curScrollableDimensionName,
+            curScrollableDimension,
             this._getScrollOffset(),
             itemDimension,
             getItemType!,
