@@ -17,16 +17,11 @@ import DebugComponent from './debug/DebugComponent';
 import {
   getItemDimension,
   getScrollDirection,
-  MixItemDimension,
   ScrollDirection,
-} from './helper';
+} from './visibility/helper';
 import RecyclerItem from './RecyclerItem';
 import RecyclerListViewContext, {ContextValue} from './RecyclerListViewContext';
-import VisibilityManager, {
-  GetRenderType,
-  RenderItemInfo,
-  RenderType,
-} from './VisibilityManager';
+import WaterfallVisibilityManager from './visibility/WaterfallManager';
 
 type ViewToken<T> = {
   item: T;
@@ -41,7 +36,8 @@ type RecyclerListViewProps<T = any> = ScrollViewProps & {
   itemDimension: MixItemDimension<T>;
   getItemType?: GetRenderType<T>;
   /**
-   * The distance of rendering in ahead.
+   * @default 300
+   * @description The distance of rendering in ahead.
    */
   renderAheadOffset?: number;
   /**
@@ -97,6 +93,7 @@ abstract class RecyclerListViewPublicImpl<T> {
 }
 
 const defaultProps: Partial<RecyclerListViewProps> = {
+  renderAheadOffset: 300,
   getItemType: () => 0,
   onEndReachedThreshold: 0,
   numColumns: 1,
@@ -158,14 +155,12 @@ class RecyclerListView<T>
     id: -1,
     trigger: () => {
       const {itemDimension, getItemType} = this.props;
-      return this._multiVisibilityManager.map(manager => {
-        return manager.updateRenderItems(
-          this.state.data,
-          this._getScrollOffset(),
-          itemDimension,
-          getItemType!,
-        );
-      });
+      return this._visibilityManager.update(
+        this.state.data,
+        this._getScrollOffset(),
+        itemDimension,
+        getItemType!,
+      );
     },
   };
   private _scrollContainerLayout: LayoutRectangle = {
@@ -174,16 +169,12 @@ class RecyclerListView<T>
     width: 0,
     height: 0,
   };
-  private _multiVisibilityManager: VisibilityManager<T>[] = new Array(
-    this.props.numColumns!,
-  )
-    .fill(0)
-    .map((_, index) => new VisibilityManager(index, this.props.numColumns!));
+  private _visibilityManager: MultiLineVisibilityManagerPublicAPI<T>;
   private _scrollOffset: NativeScrollPoint = {x: 0, y: 0};
   private _context: ContextValue<T> = {
     isHorizontal: () => this.props.horizontal,
     triggerRenderTimestamp: 0,
-    getMultiVisibilityManager: () => this._multiVisibilityManager,
+    getVisibilityManager: () => this._visibilityManager,
     getScrollContentDimension: () => this.state.scrollContentDimension,
   };
   private _isOnEndReachedTriggered:
@@ -195,9 +186,7 @@ class RecyclerListView<T>
 
   constructor(props: RecyclerListViewProps<T>) {
     super(props);
-    this._multiVisibilityManager.forEach(manager => {
-      manager.setRenderAheadOffset(props.renderAheadOffset ?? 0);
-    });
+    this._initVisibleManagers();
   }
 
   scrollToItem(info: {item: T; animated?: boolean}) {
@@ -235,14 +224,12 @@ class RecyclerListView<T>
       const {itemDimension, getItemType} = this.props;
       this._initVisibleManagers();
       this.setState({
-        multiRenderItemInfos: this._multiVisibilityManager.map(manager => {
-          return manager.forceUpdateRenderItems(
-            this.state.data,
-            this._getScrollOffset(),
-            itemDimension,
-            getItemType!,
-          );
-        }),
+        multiRenderItemInfos: this._visibilityManager.forceUpdate(
+          this.state.data,
+          this._getScrollOffset(),
+          itemDimension,
+          getItemType!,
+        ),
       });
     }
   }
@@ -350,15 +337,13 @@ class RecyclerListView<T>
     );
     if (this._getScrollContainerDimension() !== curScrollableDimension) {
       this.setState({
-        multiRenderItemInfos: this._multiVisibilityManager.map(manager => {
-          return manager.updateScrollerDimension(
-            this.state.data,
-            curScrollableDimension,
-            this._getScrollOffset(),
-            itemDimension,
-            getItemType!,
-          );
-        }),
+        multiRenderItemInfos: this._visibilityManager.resize(
+          this.state.data,
+          curScrollableDimension,
+          this._getScrollOffset(),
+          itemDimension,
+          getItemType!,
+        ),
       });
     }
     this._scrollContainerLayout = scrollContainerLayout;
@@ -464,13 +449,11 @@ class RecyclerListView<T>
   };
 
   private _initVisibleManagers() {
-    this._multiVisibilityManager = new Array(this.props.numColumns!)
-      .fill(0)
-      .map((_, index) => new VisibilityManager(index, this.props.numColumns!));
-    this._multiVisibilityManager.forEach(manager => {
-      manager.setRenderAheadOffset(this.props.renderAheadOffset ?? 0);
-      manager.setScrollerDimension(this._getScrollContainerDimension());
-    });
+    const {renderAheadOffset, numColumns} = this.props;
+    this._visibilityManager = new WaterfallVisibilityManager<T>(
+      renderAheadOffset,
+      numColumns,
+    );
   }
 }
 

@@ -8,54 +8,14 @@ import {
   isOutRangeAt,
   isOutRenderWin,
   isViewable,
-  MixItemDimension,
+  IterationDirection,
   RangeBoundary,
   ScrollDirection,
 } from './helper';
 
-export const enum IterationDirection {
-  FORWARD = ScrollDirection.FORWARD,
-  BACKWARD = ScrollDirection.BACKWARD,
-}
 type BothEnds<T> = [RenderItemInfo<T> | null, RenderItemInfo<T> | null];
-export type RenderType = number | string;
-export type GetRenderType<T> = (data: T, index: number) => RenderType;
-export type RenderItemInfo<T> = {
-  /**
-   * The data of the item in the data source.
-   */
-  data: T;
-  /**
-   * Index of the item in the data source.
-   */
-  index: number;
-  /**
-   * The render type of the item.
-   */
-  type: RenderType;
-  /**
-   * The offset of the item relative to the scroll content view.
-   */
-  position: number;
-  /**
-   * The dimension of the item on scrollable direction.
-   */
-  scrollableDim: number;
-  /**
-   * Whether the item is viewable now.
-   */
-  isViewable(): boolean;
-  /**
-   * Whether the item is out of render window.
-   *
-   * Usage: When replacing typed item outside viewable window,
-   * there may be the situation that someone item is a endpoint of render window,
-   * and the item type doesn't match, so the item will become stale one that outside render window.
-   * So that we should priority to replace it in the subsequent.
-   */
-  isOutRenderWin(): boolean;
-};
-class VisibilityManager<T> {
+
+class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   /**
    * Whether render items are changed than last render time.
    */
@@ -92,17 +52,12 @@ class VisibilityManager<T> {
   private _column = 1;
   private _numColumns = 1;
 
-  constructor(column: number, numColumns: number) {
+  constructor(renderAheadOffset: number, column: number, numColumns: number) {
     this._column = column;
     this._numColumns = numColumns;
+    this._renderAheadOffset = renderAheadOffset;
   }
 
-  setRenderAheadOffset(val: number) {
-    this._renderAheadOffset = val;
-  }
-  setScrollerDimension(val: number) {
-    this._scrollerDimension = val;
-  }
   getBothEnds() {
     return this._bothEnds;
   }
@@ -119,7 +74,7 @@ class VisibilityManager<T> {
     return this._scrollOffset;
   }
 
-  updateScrollerDimension(
+  resize(
     data: T[],
     dimension: number,
     scrollOffset: number,
@@ -127,20 +82,15 @@ class VisibilityManager<T> {
     getItemType: GetRenderType<T>,
   ) {
     this._scrollOffset = scrollOffset;
-    this.setScrollerDimension(dimension);
+    this._scrollerDimension = dimension;
     if (this._scrollerDimension === 0) {
       this._clearRenderItemInfos();
       return [];
     }
     if (this._renderItemInfos.length === 0) {
-      return this.calculateInitialRenderItems(data, itemDimension, getItemType);
+      return this.render(data, itemDimension, getItemType);
     } else {
-      return this.forceUpdateRenderItems(
-        data,
-        scrollOffset,
-        itemDimension,
-        getItemType,
-      );
+      return this.forceUpdate(data, scrollOffset, itemDimension, getItemType);
     }
   }
 
@@ -149,7 +99,7 @@ class VisibilityManager<T> {
    * (i.e. when scrolling forward, only update items in the front of render window,
    * and vice versa)
    */
-  updateRenderItems(
+  update(
     data: T[],
     scrollOffset: number,
     itemDimension: MixItemDimension<T>,
@@ -186,7 +136,7 @@ class VisibilityManager<T> {
   /**
    * Force update all items in render window.
    */
-  forceUpdateRenderItems(
+  forceUpdate(
     data: T[],
     scrollOffset: number,
     itemDimension: MixItemDimension<T>,
@@ -216,7 +166,7 @@ class VisibilityManager<T> {
     return [...this._renderItemInfos];
   }
 
-  calculateInitialRenderItems(
+  render(
     data: T[],
     itemDimension: MixItemDimension<T>,
     getItemType: GetRenderType<T>,
@@ -561,4 +511,4 @@ class VisibilityManager<T> {
   }
 }
 
-export default VisibilityManager;
+export default LineVisibilityManager;

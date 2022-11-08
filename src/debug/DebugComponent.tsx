@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import RecyclerListViewContext from '../RecyclerListViewContext';
+import LineVisibilityManager from '../visibility/LineManager';
 
 type Props = {
   debug: number | true;
@@ -48,12 +49,11 @@ if (__DEV__) {
     loopRender = () => {
       const {debug} = this.props;
       const which = debug === true ? 1 : debug;
-      const {
-        getMultiVisibilityManager,
-        getScrollContentDimension,
-        isHorizontal,
-      } = this.context;
-      const visibilityManager = getMultiVisibilityManager()[which - 1];
+      const {getVisibilityManager, getScrollContentDimension, isHorizontal} =
+        this.context;
+      const visibilityManager = getVisibilityManager().getLine(
+        which - 1,
+      ) as LineVisibilityManager<any>;
       const scrollableDimensionName = isHorizontal() ? 'width' : 'height';
       const ratio =
         this.layout[scrollableDimensionName] /

@@ -1,9 +1,3 @@
-import {IterationDirection} from './VisibilityManager';
-
-export type GetItemDimension<T> = (data: T, index: number) => number;
-export type MixItemDimension<T> =
-  | GetItemDimension<T>
-  | ReturnType<GetItemDimension<T>>;
 export function getItemDimension<T = any>(
   dimension: MixItemDimension<T>,
   data: T,
@@ -12,21 +6,6 @@ export function getItemDimension<T = any>(
   return typeof dimension === 'function' ? dimension(data, index) : dimension;
 }
 
-export function swapBothEnds<T>(data: T[]): T[] {
-  const length = data.length;
-  if (length > 1) {
-    const temp = data[length - 1];
-    data[length - 1] = data[0];
-    data[0] = temp;
-  }
-  return data;
-}
-
-export const enum ScrollDirection {
-  FORWARD = 1,
-  BACKWARD = -1,
-  NONE = 0,
-}
 export function getScrollDirection(
   prevOffset: number,
   offset: number,
@@ -112,6 +91,15 @@ export function getRenderRange(
   return [scrollOffset - buffer, scrollOffset + scrollerDimension + buffer];
 }
 
+export const enum ScrollDirection {
+  FORWARD = 1,
+  BACKWARD = -1,
+  NONE = 0,
+}
+export const enum IterationDirection {
+  FORWARD = ScrollDirection.FORWARD,
+  BACKWARD = ScrollDirection.BACKWARD,
+}
 export function getAheadRange(
   direction: IterationDirection,
   scrollOffset: number,

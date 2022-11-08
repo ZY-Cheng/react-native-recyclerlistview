@@ -1,7 +1,7 @@
 import {ContextType, memo, PropsWithChildren, PureComponent} from 'react';
 import {Animated, LayoutChangeEvent, StyleSheet} from 'react-native';
 import RecyclerListViewContext from './RecyclerListViewContext';
-import {RenderItemInfo} from './VisibilityManager';
+import {RenderItemInfo} from './visibility/LineManager';
 
 type RecyclerItemProps<T> = PropsWithChildren & {
   index: number;

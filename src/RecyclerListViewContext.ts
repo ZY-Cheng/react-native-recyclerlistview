@@ -1,9 +1,8 @@
 import {createContext} from 'react';
-import VisibilityManager from './VisibilityManager';
 
 export type ContextValue<T = any> = {
   triggerRenderTimestamp: number;
-  getMultiVisibilityManager(): VisibilityManager<T>[];
+  getVisibilityManager(): MultiLineVisibilityManagerPublicAPI<T>;
   getScrollContentDimension(): {width: number; height: number};
   isHorizontal(): boolean | null | undefined;
 };
