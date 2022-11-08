@@ -9,7 +9,7 @@ import {
 import RecyclerListViewContext from '../RecyclerListViewContext';
 
 type Props = {
-  debug?: number | true;
+  debug: number | true;
 };
 
 type State = {
@@ -53,7 +53,7 @@ if (__DEV__) {
         getScrollContentDimension,
         isHorizontal,
       } = this.context;
-      const visibilityManager = getMultiVisibilityManager()[which];
+      const visibilityManager = getMultiVisibilityManager()[which - 1];
       const scrollableDimensionName = isHorizontal() ? 'width' : 'height';
       const ratio =
         this.layout[scrollableDimensionName] /
