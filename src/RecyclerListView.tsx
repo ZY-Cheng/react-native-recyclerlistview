@@ -1,10 +1,8 @@
 import {Component, createRef, GetDerivedStateFromProps, RefObject} from 'react';
 import {
   LayoutChangeEvent,
-  LayoutRectangle,
   NativeScrollEvent,
   NativeScrollPoint,
-  NativeScrollSize,
   NativeSyntheticEvent,
   ScrollView,
   ScrollViewProps,
@@ -15,7 +13,7 @@ import {
 } from 'react-native';
 import DebugComponent from './debug/DebugComponent';
 import {
-  getItemDimension,
+  getItemDim,
   getScrollDirection,
   ScrollDirection,
 } from './visibility/helper';
@@ -28,6 +26,11 @@ type ViewToken<T> = {
   key: string;
   index: number | null;
   isViewable: boolean;
+};
+
+type Dimension = {
+  height: number;
+  width: number;
 };
 
 type RecyclerListViewProps<T = any> = ScrollViewProps & {
@@ -82,7 +85,7 @@ type RecyclerListViewProps<T = any> = ScrollViewProps & {
 
 type RecyclerListViewState<T = any> = {
   data: T[];
-  scrollContentDimension: NativeScrollSize;
+  scrollContentDim: Dimension;
   multiRenderItemInfos: RenderItemInfo<T>[][];
 };
 
@@ -111,14 +114,12 @@ class RecyclerListView<T>
   > = (nextProps, prevState) => {
     const {data, itemDimension, horizontal} = nextProps;
 
-    const scrollableDimensionName = horizontal ? 'width' : 'height';
-    const crossDimensionName = horizontal ? 'height' : 'width';
-    let scrollContentDimension = {
-      [scrollableDimensionName]:
-        prevState.scrollContentDimension[scrollableDimensionName],
-      [crossDimensionName]:
-        prevState.scrollContentDimension[crossDimensionName],
-    } as unknown as NativeScrollSize;
+    const scrollableDirDimName = horizontal ? 'width' : 'height';
+    const crossDimName = horizontal ? 'height' : 'width';
+    let scrollContentDim = {
+      [scrollableDirDimName]: prevState.scrollContentDim[scrollableDirDimName],
+      [crossDimName]: prevState.scrollContentDim[crossDimName],
+    } as Dimension;
     const {numColumns} = nextProps;
     if (
       nextProps.data.length !== prevState.data.length ||
@@ -126,27 +127,22 @@ class RecyclerListView<T>
     ) {
       const scrollContentScrollableSize = Math.max(
         ...data.reduce((acc, item, index) => {
-          acc[index % numColumns!] += getItemDimension(
-            itemDimension,
-            item,
-            index,
-          );
+          acc[index % numColumns!] += getItemDim(itemDimension, item, index);
           return acc;
         }, new Array(numColumns).fill(0)),
       );
-      scrollContentDimension[scrollableDimensionName] =
-        scrollContentScrollableSize;
+      scrollContentDim[scrollableDirDimName] = scrollContentScrollableSize;
     }
 
     return {
       data,
-      scrollContentDimension,
+      scrollContentDim,
     };
   };
 
   state: RecyclerListViewState<T> = {
     data: [],
-    scrollContentDimension: {width: 0, height: 0},
+    scrollContentDim: {width: 0, height: 0},
     multiRenderItemInfos: [[]],
   };
   scrollRef = createRef<ScrollView>();
@@ -160,9 +156,7 @@ class RecyclerListView<T>
       );
     },
   };
-  private _scrollContainerLayout: LayoutRectangle = {
-    x: 0,
-    y: 0,
+  private _scrollContainerDim: Dimension = {
     width: 0,
     height: 0,
   };
@@ -172,7 +166,7 @@ class RecyclerListView<T>
     isHorizontal: () => this.props.horizontal,
     triggerRenderTimestamp: 0,
     getVisibilityManager: () => this._visibilityManager,
-    getScrollContentDimension: () => this.state.scrollContentDimension,
+    getScrollContentDim: () => this.state.scrollContentDim,
   };
   private _isOnEndReachedTriggered:
     | boolean
@@ -200,7 +194,7 @@ class RecyclerListView<T>
       scrollRef.scrollTo({
         x: 0,
         y: this.state.data.slice(0, index).reduce((acc, item, i) => {
-          return acc + getItemDimension(this.props.itemDimension, item, i);
+          return acc + getItemDim(this.props.itemDimension, item, i);
         }, 0),
         animated,
       });
@@ -239,7 +233,7 @@ class RecyclerListView<T>
       // onMomentumScrollEnd: this._handleMomentumScrollEnd,
       scrollEventThrottle: 0.001,
     };
-    const scrollableDimensionName = horizontal ? 'width' : 'height';
+    const scrollableDirDimName = horizontal ? 'width' : 'height';
 
     return (
       <RecyclerListViewContext.Provider value={this._context}>
@@ -260,10 +254,8 @@ class RecyclerListView<T>
                     ? styles.row
                     : styles.column,
                   {
-                    [scrollableDimensionName]:
-                      this.state.scrollContentDimension[
-                        scrollableDimensionName
-                      ],
+                    [scrollableDirDimName]:
+                      this.state.scrollContentDim[scrollableDirDimName],
                   },
                 ],
                 scrollContentStyle,
@@ -322,40 +314,40 @@ class RecyclerListView<T>
     const {onLayout} = this.props;
     const scrollContainerLayout = e.nativeEvent.layout;
     this._context.triggerRenderTimestamp = Date.now();
-    const curScrollableDimension = this._getScrollContainerDimension(
+    const curScrollableDirDim = this._getScrollContainerScrollableDirDim(
       scrollContainerLayout,
     );
-    if (this._getScrollContainerDimension() !== curScrollableDimension) {
+    if (this._getScrollContainerScrollableDirDim() !== curScrollableDirDim) {
+      this._setScrollContainerDim(scrollContainerLayout);
       this.setState({
         multiRenderItemInfos: this._visibilityManager.resize(
           this.state.data,
-          curScrollableDimension,
+          curScrollableDirDim,
           this._getScrollOffset(),
         ),
       });
     }
-    this._scrollContainerLayout = scrollContainerLayout;
 
     onLayout?.(e);
   };
 
   private _maybeCallOnEndReached(preScrollOffset: NativeScrollPoint) {
     const {onEndReachedThreshold, onEndReached} = this.props;
-    const scrollContentDimension = this._getScrollContentDimension();
+    const scrollContentDim = this._getScrollContentScrollableDirDim();
     if (
       !onEndReached ||
       this._isOnEndReachedTriggered ||
-      scrollContentDimension === 0 ||
+      scrollContentDim === 0 ||
       this.state.data.length === 0
     ) {
       return;
     }
 
     const curScrollOffset = this._getScrollOffset();
-    const scrollContainerDimension = this._getScrollContainerDimension();
+    const scrollContainerDim = this._getScrollContainerScrollableDirDim();
     const distanceFromEnd =
-      scrollContentDimension - curScrollOffset - scrollContainerDimension;
-    const throttle = scrollContainerDimension * onEndReachedThreshold!;
+      scrollContentDim - curScrollOffset - scrollContainerDim;
+    const throttle = scrollContainerDim * onEndReachedThreshold!;
     if (
       distanceFromEnd <= throttle &&
       getScrollDirection(
@@ -379,21 +371,20 @@ class RecyclerListView<T>
     }
   }
 
-  private _getScrollContentDimension(
-    scrollContentDimension?: NativeScrollSize,
-  ) {
-    return (scrollContentDimension || this.state.scrollContentDimension)[
+  private _getScrollContentScrollableDirDim(dimension?: Dimension) {
+    return (dimension || this.state.scrollContentDim)[
       this.props.horizontal ? 'width' : 'height'
     ];
   }
 
-  private _getScrollContainerDimension(scrollContainerDimension?: {
-    width: number;
-    height: number;
-  }) {
-    return (scrollContainerDimension || this._scrollContainerLayout)[
+  private _getScrollContainerScrollableDirDim(dimension?: Dimension) {
+    return (dimension || this._scrollContainerDim)[
       this.props.horizontal ? 'width' : 'height'
     ];
+  }
+  private _setScrollContainerDim(dimension: Dimension) {
+    this._scrollContainerDim.width = dimension.width;
+    this._scrollContainerDim.height = dimension.height;
   }
 
   private _getScrollOffset(scrollOffset?: NativeScrollPoint) {

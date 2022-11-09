@@ -6,7 +6,7 @@ class WaterfallVisibilityManager<T>
   private _lineManagers: LineVisibilityManager<T>[];
 
   constructor(
-    itemDimension: MixItemDimension<T>,
+    itemDim: MixItemDimension<T>,
     getItemType: GetRenderType<T>,
     renderAheadOffset: number,
     numLines: number,
@@ -16,7 +16,7 @@ class WaterfallVisibilityManager<T>
       .map(
         (_, index) =>
           new LineVisibilityManager(
-            itemDimension,
+            itemDim,
             getItemType,
             renderAheadOffset,
             numLines,

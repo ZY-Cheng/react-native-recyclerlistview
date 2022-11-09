@@ -1,4 +1,4 @@
-export function getItemDimension<T = any>(
+export function getItemDim<T = any>(
   dimension: MixItemDimension<T>,
   data: T,
   index: number,
@@ -78,17 +78,17 @@ export function isOutRangeAt(
 
 export function getViewableRange(
   scrollOffset: number,
-  scrollerDimension: number,
+  scrollerDim: number,
 ): [number, number] {
-  return [scrollOffset, scrollOffset + scrollerDimension];
+  return [scrollOffset, scrollOffset + scrollerDim];
 }
 
 export function getRenderRange(
   scrollOffset: number,
-  scrollerDimension: number,
+  scrollerDim: number,
   buffer: number,
 ): [number, number] {
-  return [scrollOffset - buffer, scrollOffset + scrollerDimension + buffer];
+  return [scrollOffset - buffer, scrollOffset + scrollerDim + buffer];
 }
 
 export const enum ScrollDirection {
@@ -103,14 +103,11 @@ export const enum IterationDirection {
 export function getAheadRange(
   direction: IterationDirection,
   scrollOffset: number,
-  scrollerDimension: number,
+  scrollerDim: number,
   buffer: number,
 ): [number, number] {
   return direction === IterationDirection.FORWARD
-    ? [
-        scrollOffset + scrollerDimension,
-        scrollOffset + scrollerDimension + buffer,
-      ]
+    ? [scrollOffset + scrollerDim, scrollOffset + scrollerDim + buffer]
     : [scrollOffset - buffer, scrollOffset];
 }
 
@@ -121,9 +118,9 @@ export function isViewable(
   position: number,
   dimension: number,
   scrollOffset: number,
-  scrollerDimension: number,
+  scrollerDim: number,
 ): boolean {
-  const range = getViewableRange(scrollOffset, scrollerDimension);
+  const range = getViewableRange(scrollOffset, scrollerDim);
   return (
     isInRange(position, dimension, range) ||
     isContainRange(position, dimension, range)
@@ -137,9 +134,9 @@ export function isOutRenderWin(
   position: number,
   dimension: number,
   scrollOffset: number,
-  scrollerDimension: number,
+  scrollerDim: number,
   buffer: number,
 ): boolean {
-  const range = getRenderRange(scrollOffset, scrollerDimension, buffer);
+  const range = getRenderRange(scrollOffset, scrollerDim, buffer);
   return isOutRange(position, dimension, range);
 }

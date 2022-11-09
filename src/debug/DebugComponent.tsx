@@ -15,9 +15,9 @@ type Props = {
 
 type State = {
   renderWinOffset: Animated.Value;
-  renderWinDimension: Animated.Value;
+  renderWinDim: Animated.Value;
   viewableWinOffset: Animated.Value;
-  viewableWinDimension: Animated.Value;
+  viewableWinDim: Animated.Value;
   innerBlocks: number[];
 };
 
@@ -31,9 +31,9 @@ if (__DEV__) {
 
     state = {
       renderWinOffset: new Animated.Value(0),
-      renderWinDimension: new Animated.Value(0),
+      renderWinDim: new Animated.Value(0),
       viewableWinOffset: new Animated.Value(0),
-      viewableWinDimension: new Animated.Value(0),
+      viewableWinDim: new Animated.Value(0),
       innerBlocks: [],
     };
 
@@ -49,40 +49,40 @@ if (__DEV__) {
     loopRender = () => {
       const {debug} = this.props;
       const which = debug === true ? 1 : debug;
-      const {getVisibilityManager, getScrollContentDimension, isHorizontal} =
+      const {getVisibilityManager, getScrollContentDim, isHorizontal} =
         this.context;
       const visibilityManager = getVisibilityManager().getLine(
         which - 1,
       ) as LineVisibilityManager<any>;
-      const scrollableDimensionName = isHorizontal() ? 'width' : 'height';
+      const scrollableDirDimName = isHorizontal() ? 'width' : 'height';
       const ratio =
-        this.layout[scrollableDimensionName] /
-        getScrollContentDimension()[scrollableDimensionName];
+        this.layout[scrollableDirDimName] /
+        getScrollContentDim()[scrollableDirDimName];
       const [start, end] = visibilityManager.getBothEnds();
-      const renderWinDimension =
+      const renderWinDim =
         ((end?.position ?? 0) +
-          (end?.scrollableDim ?? 0) -
+          (end?.scrollableDirDim ?? 0) -
           (start?.position ?? 0) -
           borderWidth * 2) *
         ratio;
       const renderWinOffset = (start?.position ?? 0) * ratio;
       const viewableWinOffset = visibilityManager.getScrollOffset() * ratio;
-      const viewableWinDimension =
-        (visibilityManager.getScrollerDimension() - borderWidth * 2) * ratio;
+      const viewableWinDim =
+        (visibilityManager.getScrollerDim() - borderWidth * 2) * ratio;
 
       if (
         !Number.isNaN(renderWinOffset) &&
         !Number.isNaN(viewableWinOffset) &&
-        renderWinDimension !== 0 &&
-        viewableWinDimension !== 0 &&
+        renderWinDim !== 0 &&
+        viewableWinDim !== 0 &&
         // @ts-ignore
         (this.state.renderWinOffset.__getValue() !== renderWinOffset ||
           // @ts-ignore
-          this.state.renderWinDimension.__getValue() !== renderWinDimension ||
+          this.state.renderWinDim.__getValue() !== renderWinDim ||
           // @ts-ignore
           this.state.viewableWinOffset.__getValue() !== viewableWinOffset ||
           // @ts-ignore
-          this.state.viewableWinDimension.__getValue() !== viewableWinDimension)
+          this.state.viewableWinDim.__getValue() !== viewableWinDim)
       ) {
         this.setState({
           innerBlocks: visibilityManager
@@ -96,8 +96,8 @@ if (__DEV__) {
             duration: 0,
             useNativeDriver: false,
           }),
-          Animated.timing(this.state.renderWinDimension, {
-            toValue: renderWinDimension,
+          Animated.timing(this.state.renderWinDim, {
+            toValue: renderWinDim,
             duration: 0,
             useNativeDriver: false,
           }),
@@ -106,8 +106,8 @@ if (__DEV__) {
             duration: 0,
             useNativeDriver: false,
           }),
-          Animated.timing(this.state.viewableWinDimension, {
-            toValue: viewableWinDimension,
+          Animated.timing(this.state.viewableWinDim, {
+            toValue: viewableWinDim,
             duration: 0,
             useNativeDriver: false,
           }),
@@ -129,7 +129,7 @@ if (__DEV__) {
 
     render() {
       const {isHorizontal} = this.context;
-      const scrollableDimensionName = isHorizontal() ? 'width' : 'height';
+      const scrollableDirDimName = isHorizontal() ? 'width' : 'height';
       const translateName = `translate${isHorizontal() ? 'X' : 'Y'}`;
       return (
         <View
@@ -164,7 +164,7 @@ if (__DEV__) {
                   : styles.renderWinVertical,
                 // @ts-ignore
                 {
-                  [scrollableDimensionName]: this.state.renderWinDimension,
+                  [scrollableDirDimName]: this.state.renderWinDim,
                   transform: [{[translateName]: this.state.renderWinOffset}],
                 },
               ]}
@@ -177,7 +177,7 @@ if (__DEV__) {
                   : styles.viewableWinVertical,
                 // @ts-ignore
                 {
-                  [scrollableDimensionName]: this.state.viewableWinDimension,
+                  [scrollableDirDimName]: this.state.viewableWinDim,
                   transform: [{[translateName]: this.state.viewableWinOffset}],
                 },
               ]}

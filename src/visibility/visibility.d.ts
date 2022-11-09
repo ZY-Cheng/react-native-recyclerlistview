@@ -43,7 +43,7 @@ type RenderItemInfo<T> = {
   /**
    * The dimension of the item on scrollable direction.
    */
-  scrollableDim: number;
+  scrollableDirDim: number;
   /**
    * Whether the item is viewable now.
    */

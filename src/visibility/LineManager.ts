@@ -1,6 +1,6 @@
 import {
   getAheadRange,
-  getItemDimension,
+  getItemDim,
   getRenderRange,
   getScrollDirection,
   isInRange,
@@ -14,10 +14,6 @@ import {
 } from './helper';
 
 class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
-  /**
-   * Whether render items are changed than last render time.
-   */
-  isChanged = false;
   /**
    * Note: for performance (i.e. minimize the amount of update.),
    * the data isn't order by index of data item.
@@ -44,16 +40,16 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
    * So that we can priority to replace it in the subsequent.
    */
   private _itemIdxToItemInfoIdxMap: Map<number, number> = new Map();
-  private _scrollerDimension = 0;
+  private _scrollerDim = 0;
   private _renderAheadOffset = 0;
   private _scrollOffset = 0;
   private _line = 1;
   private _numLines = 1;
   private _getItemType: GetRenderType<T>;
-  private _itemDimension: MixItemDimension<T>;
+  private _itemDim: MixItemDimension<T>;
 
   constructor(
-    itemDimension: MixItemDimension<T>,
+    itemDim: MixItemDimension<T>,
     getItemType: GetRenderType<T>,
     renderAheadOffset: number,
     numLines: number,
@@ -62,7 +58,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     this._line = line;
     this._numLines = numLines;
     this._renderAheadOffset = renderAheadOffset;
-    this._itemDimension = itemDimension;
+    this._itemDim = itemDim;
     this._getItemType = getItemType;
   }
 
@@ -72,8 +68,8 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   getRenderItemInfos() {
     return this._renderItemInfos;
   }
-  getScrollerDimension() {
-    return this._scrollerDimension;
+  getScrollerDim() {
+    return this._scrollerDim;
   }
   getRenderAheadOffset() {
     return this._renderAheadOffset;
@@ -84,8 +80,8 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
 
   resize(data: T[], dimension: number, scrollOffset: number) {
     this._scrollOffset = scrollOffset;
-    this._scrollerDimension = dimension;
-    if (this._scrollerDimension === 0) {
+    this._scrollerDim = dimension;
+    if (this._scrollerDim === 0) {
       this._clearRenderItemInfos();
       return [];
     }
@@ -218,13 +214,9 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   }
 
   private _updateRenderItemInfos(data: T[], direction: IterationDirection) {
-    this.isChanged = false;
-
     const nextRenderItemInfos = this._findAppearingItems(data, direction);
 
     if (nextRenderItemInfos.length > 0) {
-      this.isChanged = true;
-
       const {
         _renderItemInfos: renderItemInfos,
         _bothEnds: bothEnds,
@@ -354,11 +346,11 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
           !disappearingItem.isViewable() &&
           isOutRange(
             disappearingItem.position,
-            disappearingItem.scrollableDim,
+            disappearingItem.scrollableDirDim,
             getAheadRange(
               direction,
               this._scrollOffset,
-              this._scrollerDimension,
+              this._scrollerDim,
               this._renderAheadOffset,
             ),
           )
@@ -372,7 +364,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
 
   private _findAppearingItems(data: T[], direction: IterationDirection) {
     const {
-      _itemDimension: itemDimension,
+      _itemDim: itemDim,
       _getItemType: getItemType,
       _numLines: numLines,
       _line: line,
@@ -384,7 +376,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
 
     const renderWinRange = getRenderRange(
       scrollOffset,
-      this._scrollerDimension,
+      this._scrollerDim,
       this._renderAheadOffset,
     );
 
@@ -392,8 +384,8 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
 
     const searchResult: RenderItemInfo<T>[] = [];
     let preItemInfo: RenderItemInfo<T> | null = isForward ? end : start;
-    let preScrollableDim: number = preItemInfo
-      ? getItemDimension(itemDimension, preItemInfo.data, preItemInfo.index)
+    let preScrollableDirDim: number = preItemInfo
+      ? getItemDim(itemDim, preItemInfo.data, preItemInfo.index)
       : 0;
     const searchIndex = endpoint ? endpoint.index : line - numLines;
     const searchStep = direction * numLines;
@@ -406,42 +398,42 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     const conditionRight = isForward ? () => searchRangeEnd : () => i;
     for (; conditionLeft() < conditionRight(); i += searchStep) {
       const item = data[i];
-      const scrollableDim = getItemDimension(itemDimension, item, i);
+      const scrollableDirDim = getItemDim(itemDim, item, i);
       const position = isForward
-        ? (preItemInfo ? preItemInfo.position : 0) + preScrollableDim
-        : (preItemInfo ? preItemInfo.position : 0) - scrollableDim;
+        ? (preItemInfo ? preItemInfo.position : 0) + preScrollableDirDim
+        : (preItemInfo ? preItemInfo.position : 0) - scrollableDirDim;
       const itemInfo: RenderItemInfo<T> = {
         data: item,
         index: i,
         position,
-        scrollableDim,
+        scrollableDirDim,
         line,
         type: getItemType(item, i),
         isOutRenderWin: () =>
           isOutRenderWin(
             itemInfo.position,
-            itemInfo.scrollableDim,
+            itemInfo.scrollableDirDim,
             this._scrollOffset,
-            this._scrollerDimension,
+            this._scrollerDim,
             this._renderAheadOffset,
           ),
         isViewable: () =>
           isViewable(
             itemInfo.position,
-            itemInfo.scrollableDim,
+            itemInfo.scrollableDirDim,
             this._scrollOffset,
-            this._scrollerDimension,
+            this._scrollerDim,
           ),
       };
 
       const isOutBoundary = isOutRangeAt(
         outBoundary,
         position,
-        scrollableDim,
+        scrollableDirDim,
         renderWinRange,
       );
       if (
-        !isInRange(position, scrollableDim, renderWinRange) &&
+        !isInRange(position, scrollableDirDim, renderWinRange) &&
         !isOutBoundary
       ) {
         // When quickly scrolling, render items may be out of render window,
@@ -449,7 +441,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
         // So, the items may be out of render window,but need to calculate.
         // Skip middle items!
         preItemInfo = itemInfo;
-        preScrollableDim = scrollableDim;
+        preScrollableDirDim = scrollableDirDim;
         continue;
       }
 
@@ -463,7 +455,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
       searchResult.push(itemInfo);
 
       preItemInfo = itemInfo;
-      preScrollableDim = scrollableDim;
+      preScrollableDirDim = scrollableDirDim;
     }
     return searchResult;
   }
