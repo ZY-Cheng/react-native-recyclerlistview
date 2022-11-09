@@ -13,8 +13,6 @@ import {
   ScrollDirection,
 } from './helper';
 
-type BothEnds<T> = [RenderItemInfo<T> | null, RenderItemInfo<T> | null];
-
 class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   /**
    * Whether render items are changed than last render time.
@@ -49,8 +47,8 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   private _scrollerDimension = 0;
   private _renderAheadOffset = 0;
   private _scrollOffset = 0;
-  private _column = 1;
-  private _numColumns = 1;
+  private _line = 1;
+  private _numLines = 1;
   private _getItemType: GetRenderType<T>;
   private _itemDimension: MixItemDimension<T>;
 
@@ -58,11 +56,11 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     itemDimension: MixItemDimension<T>,
     getItemType: GetRenderType<T>,
     renderAheadOffset: number,
-    numColumns: number,
-    column: number,
+    numLines: number,
+    line: number,
   ) {
-    this._column = column;
-    this._numColumns = numColumns;
+    this._line = line;
+    this._numLines = numLines;
     this._renderAheadOffset = renderAheadOffset;
     this._itemDimension = itemDimension;
     this._getItemType = getItemType;
@@ -237,7 +235,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
       const newItemInfoEndpointLocation = isForward ? 1 : 0;
       let disappearingEndpoint = bothEnds[disappearingEndpointLocation];
       const anotherEndpoint = bothEnds[newItemInfoEndpointLocation];
-      const nextIdxStep = direction * this._numColumns;
+      const nextIdxStep = direction * this._numLines;
 
       for (let i = 0; i < nextRenderItemInfos.length; i++) {
         const item = nextRenderItemInfos[i];
@@ -376,8 +374,8 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     const {
       _itemDimension: itemDimension,
       _getItemType: getItemType,
-      _numColumns: numColumns,
-      _column: column,
+      _numLines: numLines,
+      _line: line,
     } = this;
     const isForward = direction === IterationDirection.FORWARD;
     const [start, end] = this._bothEnds;
@@ -397,8 +395,8 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     let preScrollableDim: number = preItemInfo
       ? getItemDimension(itemDimension, preItemInfo.data, preItemInfo.index)
       : 0;
-    const searchIndex = endpoint ? endpoint.index : column - numColumns;
-    const searchStep = direction * numColumns;
+    const searchIndex = endpoint ? endpoint.index : line - numLines;
+    const searchStep = direction * numLines;
     const searchRange = isForward
       ? [searchIndex + searchStep, data.length]
       : [searchIndex + searchStep, -1];
@@ -417,6 +415,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
         index: i,
         position,
         scrollableDim,
+        line,
         type: getItemType(item, i),
         isOutRenderWin: () =>
           isOutRenderWin(

@@ -9,9 +9,9 @@ class WaterfallVisibilityManager<T>
     itemDimension: MixItemDimension<T>,
     getItemType: GetRenderType<T>,
     renderAheadOffset: number,
-    numColumns: number,
+    numLines: number,
   ) {
-    this._lineManagers = new Array(numColumns)
+    this._lineManagers = new Array(numLines)
       .fill(0)
       .map(
         (_, index) =>
@@ -19,7 +19,7 @@ class WaterfallVisibilityManager<T>
             itemDimension,
             getItemType,
             renderAheadOffset,
-            numColumns,
+            numLines,
             index,
           ),
       );

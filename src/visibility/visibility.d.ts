@@ -15,6 +15,8 @@ declare abstract class VisibilityManagerPublicAPI<T, R> {
   abstract forceUpdate(data: T[], scrollOffset: number): R;
 }
 
+type BothEnds<T> = [RenderItemInfo<T> | null, RenderItemInfo<T> | null];
+
 type GetItemDimension<T> = (data: T, index: number) => number;
 type MixItemDimension<T> =
   | GetItemDimension<T>
@@ -55,5 +57,10 @@ type RenderItemInfo<T> = {
    * So that we should priority to replace it in the subsequent.
    */
   isOutRenderWin(): boolean;
+  /**
+   * The column of the item when scrolling vertically,
+   * or the row of the item when scrolling horizontally.
+   */
+  line: number;
 };
 type GetRenderType<T> = (data: T, index: number) => RenderType;
