@@ -19,7 +19,7 @@ import {
 } from './visibility/helper';
 import RecyclerItem from './RecyclerItem';
 import RecyclerListViewContext, {ContextValue} from './RecyclerListViewContext';
-import WaterfallVisibilityManager from './visibility/WaterfallManager';
+import MultiLineVisibilityManager from './visibility/MultiLineManager';
 
 type ViewToken<T> = {
   item: T;
@@ -167,6 +167,8 @@ class RecyclerListView<T>
     triggerRenderTimestamp: 0,
     getVisibilityManager: () => this._visibilityManager,
     getScrollContentDim: () => this.state.scrollContentDim,
+    getScrollContainerDim: () => this._scrollContainerDim,
+    getNumLines: () => this.props.numColumns,
   };
   private _isOnEndReachedTriggered:
     | boolean
@@ -221,7 +223,7 @@ class RecyclerListView<T>
 
   render() {
     const {scrollContentStyle, debug, horizontal, numColumns} = this.props;
-    const isMultiCol = numColumns > 1;
+    const isMultiLine = numColumns > 1;
     const scrollViewProps: ScrollViewProps = {
       ...this.props,
       contentContainerStyle: [horizontal ? styles.row : styles.column],
@@ -250,7 +252,7 @@ class RecyclerListView<T>
               style={StyleSheet.compose<ViewStyle>(
                 [
                   styles.scrollContent,
-                  (!horizontal && isMultiCol) || (horizontal && !isMultiCol)
+                  (!horizontal && isMultiLine) || (horizontal && !isMultiLine)
                     ? styles.row
                     : styles.column,
                   {
@@ -260,8 +262,8 @@ class RecyclerListView<T>
                 ],
                 scrollContentStyle,
               )}>
-              {isMultiCol
-                ? this._renderColumnsContainer()
+              {isMultiLine
+                ? this._renderLinesContainer()
                 : this._renderItems(this.state.multiRenderItemInfos[0])}
             </View>
           </ScrollView>
@@ -367,6 +369,7 @@ class RecyclerListView<T>
           }
         });
       } finally {
+        // noop
       }
     }
   }
@@ -393,7 +396,7 @@ class RecyclerListView<T>
     ];
   }
 
-  private _renderColumnsContainer() {
+  private _renderLinesContainer() {
     const {multiRenderItemInfos} = this.state;
     return multiRenderItemInfos.map((infos, index) => {
       return (
@@ -410,15 +413,11 @@ class RecyclerListView<T>
   }
 
   private _renderItems = (renderItemInfos: RenderItemInfo<T>[]) => {
-    const {renderItem, horizontal} = this.props;
+    const {renderItem} = this.props;
 
     const views = renderItemInfos.map((info, index) => {
       return (
-        <RecyclerItem
-          horizontal={horizontal}
-          key={index}
-          index={index}
-          info={info}>
+        <RecyclerItem key={index} index={index} info={info}>
           {renderItem({data: info.data, index: info.index, type: info.type})}
         </RecyclerItem>
       );
@@ -431,7 +430,7 @@ class RecyclerListView<T>
     const {renderAheadOffset, numColumns, itemDimension, getItemType} =
       this.props;
 
-    this._visibilityManager = new WaterfallVisibilityManager<T>(
+    this._visibilityManager = new MultiLineVisibilityManager<T>(
       itemDimension,
       getItemType,
       renderAheadOffset,

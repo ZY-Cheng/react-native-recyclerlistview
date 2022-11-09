@@ -1,21 +1,7 @@
-class MasonryVisibilityManager<T>
-  implements MultiLineVisibilityManagerPublicAPI<T>
-{
-  resize(data: T[], dimension: number, scrollOffset: number) {
-    throw new Error('Method not implemented.');
-  }
-  render(data: T[]) {
-    throw new Error('Method not implemented.');
-  }
-  update(data: T[], scrollOffset: number) {
-    throw new Error('Method not implemented.');
-  }
-  forceUpdate(data: T[], scrollOffset: number) {
-    throw new Error('Method not implemented.');
-  }
-  getLine(which: number) {
-    throw new Error('Method not implemented.');
-  }
-}
+import VirtualMultiLineVisibilityManager from './VirtualMultiLineManager';
+
+class MasonryVisibilityManager<
+  T,
+> extends VirtualMultiLineVisibilityManager<T> {}
 
 export default MasonryVisibilityManager;

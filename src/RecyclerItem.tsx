@@ -1,12 +1,10 @@
 import {ContextType, memo, PropsWithChildren, PureComponent} from 'react';
 import {Animated, LayoutChangeEvent, StyleSheet} from 'react-native';
 import RecyclerListViewContext from './RecyclerListViewContext';
-import {RenderItemInfo} from './visibility/LineManager';
 
 type RecyclerItemProps<T> = PropsWithChildren & {
   index: number;
   info: RenderItemInfo<T>;
-  horizontal: boolean | null | undefined;
 };
 
 type RecyclerItemState = {};
@@ -20,9 +18,14 @@ class RecyclerItem<T> extends PureComponent<
   handleLayout = (e: LayoutChangeEvent) => {};
 
   render() {
-    const {children, info, horizontal} = this.props;
+    const {children, info} = this.props;
+    const {line, position, index} = info;
+    const {isHorizontal, getScrollContainerDim, getNumLines} = this.context;
+    const horizontal = isHorizontal();
 
-    const translateName = `translate${horizontal ? 'X' : 'Y'}`;
+    const scrollablePosName = `translate${horizontal ? 'X' : 'Y'}`;
+    const crossPosName = `translate${horizontal ? 'Y' : 'X'}`;
+
     return (
       <Animated.View
         onLayout={this.handleLayout}
@@ -31,8 +34,21 @@ class RecyclerItem<T> extends PureComponent<
           horizontal ? styles.horizontal : styles.vertical,
           // @ts-ignore
           {
-            transform: [{[translateName]: info.position}],
-            zIndex: info.index,
+            transform:
+              line > 1 && false
+                ? [
+                    {[scrollablePosName]: position},
+                    {
+                      [crossPosName]:
+                        (getScrollContainerDim()[
+                          horizontal ? 'height' : 'width'
+                        ] *
+                          (line - 1)) /
+                        getNumLines(),
+                    },
+                  ]
+                : [{[scrollablePosName]: position}],
+            zIndex: index,
           },
         ]}>
         {children}

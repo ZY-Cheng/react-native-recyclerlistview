@@ -13,37 +13,16 @@ import {
   ScrollDirection,
 } from './helper';
 
-class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
-  /**
-   * Note: for performance (i.e. minimize the amount of update.),
-   * the data isn't order by index of data item.
-   * And operate the data in place, return the shallow copy.
-   */
-  private _renderItemInfos: RenderItemInfo<T>[] = [];
-  /**
-   * The endpoints of render window.
-   *
-   * Note: The items in the bothEnds are ordered by index of data item
-   */
+class VirtualMultiLineVisibilityManager<T>
+  implements MultiLineVisibilityManagerPublicAPI<T>
+{
+  private _renderItemInfos: RenderItemInfo<T>[][] = [[]];
   private _bothEnds: BothEnds<T> = [null, null];
-  /**
-   * Inner array of each type is order by index of data item.
-   */
-  private _typedIndexesMap: Map<RenderType, number[]> = new Map();
-  /**
-   * Inner array of each type is order by index of data item.
-   * Each array store item indexes that out of render window.
-   *
-   * When replacing typed item outside viewable window,
-   * there may be the situation that someone item is a endpoint of render window,
-   * and the item type doesn't match, so the item will become stale one that outside render window.
-   * So that we can priority to replace it in the subsequent.
-   */
+  private _typedIndexesMap: Map<RenderType, number[][]> = new Map();
   private _itemIdxToItemInfoIdxMap: Map<number, number> = new Map();
   private _scrollerDim = 0;
   private _renderAheadOffset = 0;
   private _scrollOffset = 0;
-  private _line = 1;
   private _numLines = 1;
   private _getItemType: GetRenderType<T>;
   private _itemDim: MixItemDimension<T>;
@@ -53,9 +32,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     getItemType: GetRenderType<T>,
     renderAheadOffset: number,
     numLines: number,
-    line: number,
   ) {
-    this._line = line;
     this._numLines = numLines;
     this._renderAheadOffset = renderAheadOffset;
     this._itemDim = itemDim;
@@ -387,7 +364,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     let preScrollableDirDim: number = preItemInfo
       ? getItemDim(itemDim, preItemInfo.data, preItemInfo.index)
       : 0;
-    const searchIndex = endpoint ? endpoint.index : line - 1 - numLines;
+    const searchIndex = endpoint ? endpoint.index : line - numLines;
     const searchStep = direction * numLines;
     const searchRange = isForward
       ? [searchIndex + searchStep, data.length]
@@ -461,4 +438,4 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   }
 }
 
-export default LineVisibilityManager;
+export default VirtualMultiLineVisibilityManager;
