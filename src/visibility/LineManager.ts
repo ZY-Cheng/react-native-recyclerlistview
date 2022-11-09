@@ -51,11 +51,21 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   private _scrollOffset = 0;
   private _column = 1;
   private _numColumns = 1;
+  private _getItemType: GetRenderType<T>;
+  private _itemDimension: MixItemDimension<T>;
 
-  constructor(renderAheadOffset: number, column: number, numColumns: number) {
+  constructor(
+    itemDimension: MixItemDimension<T>,
+    getItemType: GetRenderType<T>,
+    renderAheadOffset: number,
+    numColumns: number,
+    column: number,
+  ) {
     this._column = column;
     this._numColumns = numColumns;
     this._renderAheadOffset = renderAheadOffset;
+    this._itemDimension = itemDimension;
+    this._getItemType = getItemType;
   }
 
   getBothEnds() {
@@ -74,13 +84,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     return this._scrollOffset;
   }
 
-  resize(
-    data: T[],
-    dimension: number,
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  resize(data: T[], dimension: number, scrollOffset: number) {
     this._scrollOffset = scrollOffset;
     this._scrollerDimension = dimension;
     if (this._scrollerDimension === 0) {
@@ -88,9 +92,9 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
       return [];
     }
     if (this._renderItemInfos.length === 0) {
-      return this.render(data, itemDimension, getItemType);
+      return this.render(data);
     } else {
-      return this.forceUpdate(data, scrollOffset, itemDimension, getItemType);
+      return this.forceUpdate(data, scrollOffset);
     }
   }
 
@@ -99,12 +103,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
    * (i.e. when scrolling forward, only update items in the front of render window,
    * and vice versa)
    */
-  update(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  update(data: T[], scrollOffset: number) {
     const isScrolled = scrollOffset !== this._scrollOffset;
     if (
       data.length > this._renderItemInfos.length &&
@@ -121,12 +120,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
       if (scrollDirection !== ScrollDirection.NONE) {
         let direction = scrollDirection as unknown as IterationDirection;
 
-        this._updateRenderItemInfos(
-          data,
-          direction,
-          itemDimension,
-          getItemType,
-        );
+        this._updateRenderItemInfos(data, direction);
       }
     }
 
@@ -136,12 +130,7 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
   /**
    * Force update all items in render window.
    */
-  forceUpdate(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  forceUpdate(data: T[], scrollOffset: number) {
     this._scrollOffset = scrollOffset;
     const selectedEndpoint = this._bothEnds[0];
     if (selectedEndpoint) {
@@ -150,34 +139,15 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
       this._appendItemInfo(itemInfo.item);
       this._setBothEnds(selectedEndpoint, selectedEndpoint);
     }
-    this._updateRenderItemInfos(
-      data,
-      IterationDirection.FORWARD,
-      itemDimension,
-      getItemType,
-    );
-    this._updateRenderItemInfos(
-      data,
-      IterationDirection.BACKWARD,
-      itemDimension,
-      getItemType,
-    );
+    this._updateRenderItemInfos(data, IterationDirection.FORWARD);
+    this._updateRenderItemInfos(data, IterationDirection.BACKWARD);
 
     return [...this._renderItemInfos];
   }
 
-  render(
-    data: T[],
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  render(data: T[]) {
     this._clearRenderItemInfos();
-    this._updateRenderItemInfos(
-      data,
-      IterationDirection.FORWARD,
-      itemDimension,
-      getItemType,
-    );
+    this._updateRenderItemInfos(data, IterationDirection.FORWARD);
 
     return [...this._renderItemInfos];
   }
@@ -249,20 +219,10 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     this._bothEnds[1] = end;
   }
 
-  private _updateRenderItemInfos(
-    data: T[],
-    direction: IterationDirection,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  private _updateRenderItemInfos(data: T[], direction: IterationDirection) {
     this.isChanged = false;
 
-    const nextRenderItemInfos = this._findAppearingItems(
-      data,
-      direction,
-      itemDimension,
-      getItemType,
-    );
+    const nextRenderItemInfos = this._findAppearingItems(data, direction);
 
     if (nextRenderItemInfos.length > 0) {
       this.isChanged = true;
@@ -412,12 +372,13 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     return null;
   }
 
-  private _findAppearingItems(
-    data: T[],
-    direction: IterationDirection,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  private _findAppearingItems(data: T[], direction: IterationDirection) {
+    const {
+      _itemDimension: itemDimension,
+      _getItemType: getItemType,
+      _numColumns: numColumns,
+      _column: column,
+    } = this;
     const isForward = direction === IterationDirection.FORWARD;
     const [start, end] = this._bothEnds;
     const endpoint = isForward ? end : start;
@@ -436,10 +397,8 @@ class LineVisibilityManager<T> implements LineVisibilityManagerPublicAPI<T> {
     let preScrollableDim: number = preItemInfo
       ? getItemDimension(itemDimension, preItemInfo.data, preItemInfo.index)
       : 0;
-    const searchIndex = endpoint
-      ? endpoint.index
-      : this._column - this._numColumns;
-    const searchStep = direction * this._numColumns;
+    const searchIndex = endpoint ? endpoint.index : column - numColumns;
+    const searchStep = direction * numColumns;
     const searchRange = isForward
       ? [searchIndex + searchStep, data.length]
       : [searchIndex + searchStep, -1];

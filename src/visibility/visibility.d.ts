@@ -5,34 +5,14 @@ declare abstract class LineVisibilityManagerPublicAPI<
 declare abstract class MultiLineVisibilityManagerPublicAPI<
   T,
 > extends VisibilityManagerPublicAPI<T, RenderItemInfo<T>[][]> {
-  public abstract getLine(which: number): LineVisibilityManagerPublicAPI<T>;
+  abstract getLine(which: number): LineVisibilityManagerPublicAPI<T>;
 }
 
 declare abstract class VisibilityManagerPublicAPI<T, R> {
-  public abstract resize(
-    data: T[],
-    dimension: number,
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): R;
-  public abstract render(
-    data: T[],
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): R;
-  public abstract update(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): R;
-  public abstract forceUpdate(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): R;
+  abstract resize(data: T[], dimension: number, scrollOffset: number): R;
+  abstract render(data: T[]): R;
+  abstract update(data: T[], scrollOffset: number): R;
+  abstract forceUpdate(data: T[], scrollOffset: number): R;
 }
 
 type GetItemDimension<T> = (data: T, index: number) => number;

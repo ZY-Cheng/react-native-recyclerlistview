@@ -154,12 +154,9 @@ class RecyclerListView<T>
   private _hostUpdate = {
     id: -1,
     trigger: () => {
-      const {itemDimension, getItemType} = this.props;
       return this._visibilityManager.update(
         this.state.data,
         this._getScrollOffset(),
-        itemDimension,
-        getItemType!,
       );
     },
   };
@@ -180,9 +177,6 @@ class RecyclerListView<T>
   private _isOnEndReachedTriggered:
     | boolean
     | Parameters<ConstructorParameters<PromiseConstructor>[0]>[0] = false;
-  private get _isMultiCol() {
-    return this.props.numColumns! > 1;
-  }
 
   constructor(props: RecyclerListViewProps<T>) {
     super(props);
@@ -221,21 +215,19 @@ class RecyclerListView<T>
     }
 
     if (this.props.numColumns !== this.state.multiRenderItemInfos.length) {
-      const {itemDimension, getItemType} = this.props;
       this._initVisibleManagers();
       this.setState({
         multiRenderItemInfos: this._visibilityManager.forceUpdate(
           this.state.data,
           this._getScrollOffset(),
-          itemDimension,
-          getItemType!,
         ),
       });
     }
   }
 
   render() {
-    const {scrollContentStyle, debug, horizontal} = this.props;
+    const {scrollContentStyle, debug, horizontal, numColumns} = this.props;
+    const isMultiCol = numColumns > 1;
     const scrollViewProps: ScrollViewProps = {
       ...this.props,
       contentContainerStyle: [horizontal ? styles.row : styles.column],
@@ -264,8 +256,7 @@ class RecyclerListView<T>
               style={StyleSheet.compose<ViewStyle>(
                 [
                   styles.scrollContent,
-                  (!horizontal && this._isMultiCol) ||
-                  (horizontal && !this._isMultiCol)
+                  (!horizontal && isMultiCol) || (horizontal && !isMultiCol)
                     ? styles.row
                     : styles.column,
                   {
@@ -277,7 +268,7 @@ class RecyclerListView<T>
                 ],
                 scrollContentStyle,
               )}>
-              {this._isMultiCol
+              {isMultiCol
                 ? this._renderColumnsContainer()
                 : this._renderItems(this.state.multiRenderItemInfos[0])}
             </View>
@@ -317,7 +308,6 @@ class RecyclerListView<T>
     //
     // Use other timer to wrap `setState()` or wrap `updateRenderItems()` `setState()`,
     // CPU usage more higher, but rendering efficiency more higher.
-
     cancelAnimationFrame(this._hostUpdate.id);
     this._hostUpdate.id = requestAnimationFrame(() => {
       this.setState({
@@ -329,7 +319,7 @@ class RecyclerListView<T>
   };
 
   private _handleLayout = (e: LayoutChangeEvent) => {
-    const {onLayout, itemDimension, getItemType} = this.props;
+    const {onLayout} = this.props;
     const scrollContainerLayout = e.nativeEvent.layout;
     this._context.triggerRenderTimestamp = Date.now();
     const curScrollableDimension = this._getScrollContainerDimension(
@@ -341,8 +331,6 @@ class RecyclerListView<T>
           this.state.data,
           curScrollableDimension,
           this._getScrollOffset(),
-          itemDimension,
-          getItemType!,
         ),
       });
     }
@@ -449,8 +437,12 @@ class RecyclerListView<T>
   };
 
   private _initVisibleManagers() {
-    const {renderAheadOffset, numColumns} = this.props;
+    const {renderAheadOffset, numColumns, itemDimension, getItemType} =
+      this.props;
+
     this._visibilityManager = new WaterfallVisibilityManager<T>(
+      itemDimension,
+      getItemType,
       renderAheadOffset,
       numColumns,
     );

@@ -1,36 +1,19 @@
 class MasonryVisibilityManager<T>
   implements MultiLineVisibilityManagerPublicAPI<T>
 {
-  public resize(
-    data: T[],
-    dimension: number,
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): RenderItemInfo<T>[][] {
+  resize(data: T[], dimension: number, scrollOffset: number) {
     throw new Error('Method not implemented.');
   }
-  public render(
-    data: T[],
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): RenderItemInfo<T>[][] {
+  render(data: T[]) {
     throw new Error('Method not implemented.');
   }
-  public update(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): RenderItemInfo<T>[][] {
+  update(data: T[], scrollOffset: number) {
     throw new Error('Method not implemented.');
   }
-  public forceUpdate(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ): RenderItemInfo<T>[][] {
+  forceUpdate(data: T[], scrollOffset: number) {
+    throw new Error('Method not implemented.');
+  }
+  getLine(which: number) {
     throw new Error('Method not implemented.');
   }
 }

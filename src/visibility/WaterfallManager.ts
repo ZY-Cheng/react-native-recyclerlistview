@@ -5,53 +5,42 @@ class WaterfallVisibilityManager<T>
 {
   private _lineManagers: LineVisibilityManager<T>[];
 
-  constructor(renderAheadOffset: number, numColumns: number) {
+  constructor(
+    itemDimension: MixItemDimension<T>,
+    getItemType: GetRenderType<T>,
+    renderAheadOffset: number,
+    numColumns: number,
+  ) {
     this._lineManagers = new Array(numColumns)
       .fill(0)
       .map(
         (_, index) =>
-          new LineVisibilityManager(renderAheadOffset, index, numColumns),
+          new LineVisibilityManager(
+            itemDimension,
+            getItemType,
+            renderAheadOffset,
+            numColumns,
+            index,
+          ),
       );
   }
 
-  public resize(
-    data: T[],
-    dimension: number,
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  resize(data: T[], dimension: number, scrollOffset: number) {
     return this._lineManagers.map(manager =>
-      manager.resize(data, dimension, scrollOffset, itemDimension, getItemType),
+      manager.resize(data, dimension, scrollOffset),
     );
   }
-  public render(
-    data: T[],
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  render(data: T[]) {
+    return this._lineManagers.map(manager => manager.render(data));
+  }
+  update(data: T[], scrollOffset: number) {
     return this._lineManagers.map(manager =>
-      manager.render(data, itemDimension, getItemType),
+      manager.update(data, scrollOffset),
     );
   }
-  public update(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
+  forceUpdate(data: T[], scrollOffset: number) {
     return this._lineManagers.map(manager =>
-      manager.update(data, scrollOffset, itemDimension, getItemType),
-    );
-  }
-  public forceUpdate(
-    data: T[],
-    scrollOffset: number,
-    itemDimension: MixItemDimension<T>,
-    getItemType: GetRenderType<T>,
-  ) {
-    return this._lineManagers.map(manager =>
-      manager.forceUpdate(data, scrollOffset, itemDimension, getItemType),
+      manager.forceUpdate(data, scrollOffset),
     );
   }
 
